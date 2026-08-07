@@ -1,8 +1,18 @@
 # keys-abliterated / heretic Dual-Boot  
 ## DSV4F + DSpark 0731 + MiniMax-H3 (concurrency=2)
 
-> **This is the [drowzeys](https://github.com/drowzeys) keyspark fork** of
-> [tonyd2wild/ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory).  
+> ## 🙏 Credit & shout-out — Tony’s original Video Gen Factory
+>
+> **This repo is a [drowzeys](https://github.com/drowzeys) / keyspark fork of Tony’s work.**  
+> The dual MiniMax-H3 + full-context DeepSeek-V4-Flash co-tenancy design, start-order
+> rules, util **0.78** profile, co-residency benches (idle / 1× / 2× H3), and the
+> “nothing turned off” factory framing are **[Tony (tonyd2wild)](https://github.com/tonyd2wild)’s**.
+>
+> ### ⭐ Upstream (please star & cite this first)
+> **[tonyd2wild/ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory)**
+>
+> Full credits: **[docs/CREDITS.md](docs/CREDITS.md)**  
+> This fork only adds keyspark dual-boot (ablit DS4 + heretic H3 + quality parallel path).  
 > GitHub name:
 > [`keys-abliterated-heretic-Dual-Boot-DSV4F-Dspark0731-with-MiniMax-H3-concurrency-2`](https://github.com/drowzeys/keys-abliterated-heretic-Dual-Boot-DSV4F-Dspark0731-with-MiniMax-H3-concurrency-2)
 
@@ -22,11 +32,13 @@ bash deploy/keyspark/run_quality_parallel.sh
 
 | Doc | What |
 |-----|------|
+| **[docs/CREDITS.md](docs/CREDITS.md)** | **Shout-out to Tony** + what this fork adds |
 | **[docs/AGENT_ONESHOT_RECIPE.md](docs/AGENT_ONESHOT_RECIPE.md)** | **Point your agent here** — exact dual-Spark bring-up, patches, failure playbook |
 | **[docs/KEYSPARK_RESULTS.md](docs/KEYSPARK_RESULTS.md)** | **Published speeds** — pre/post ablit, H3 upgrade, sequential vs parallel(2) |
 | [deploy/keyspark/README.md](deploy/keyspark/README.md) | Dual-boot ops on keyspark fleet |
 | [deploy/keyspark/STATUS.md](deploy/keyspark/STATUS.md) | Live stack notes |
 | [bench/results/](bench/results/) | Raw C1–C6 + video wall timings |
+| **[Upstream: tonyd2wild/ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory)** | **Tony’s original Video Gen Factory** ⭐ |
 
 ```bash
 # agent one-shot
@@ -52,6 +64,11 @@ Full tables → [docs/KEYSPARK_RESULTS.md](docs/KEYSPARK_RESULTS.md)
 ---
 
 # DS4 x H3 Video Gen Factory
+
+> **Upstream body below is Tony’s original factory README** (preserved).  
+> Author: **[tonyd2wild](https://github.com/tonyd2wild)** ·  
+> Repo: **[ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory)** ·  
+> Shout-out / credits: **[docs/CREDITS.md](docs/CREDITS.md)**
 
 ![banner](docs/banner.png)
 

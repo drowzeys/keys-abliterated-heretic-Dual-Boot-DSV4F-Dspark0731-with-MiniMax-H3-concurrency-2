@@ -1,7 +1,10 @@
 # Live status — DS4-0731 **ABLIT** + MiniMax H3 **heretic TE** dual-boot
 
 **Updated:** 2026-08-07  
-**Profile:** `STACK=ablit` · H3 fleet **concurrency=2** · quality-first video default
+**Profile:** `STACK=ablit` · H3 fleet **concurrency=2** · quality-first video default  
+
+**Upstream credit:** co-tenancy factory by **[Tony / tonyd2wild](https://github.com/tonyd2wild)** —  
+[ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory). See [docs/CREDITS.md](../../docs/CREDITS.md).
 
 ## Stack: dual-boot
 

@@ -1,7 +1,16 @@
 # Agents — keyspark dual-boot (read first)
 
 **Full one-shot recipe:** [`docs/AGENT_ONESHOT_RECIPE.md`](../../docs/AGENT_ONESHOT_RECIPE.md)  
-**Measured speeds:** [`docs/KEYSPARK_RESULTS.md`](../../docs/KEYSPARK_RESULTS.md)
+**Measured speeds:** [`docs/KEYSPARK_RESULTS.md`](../../docs/KEYSPARK_RESULTS.md)  
+**Credits:** [`docs/CREDITS.md`](../../docs/CREDITS.md)
+
+## Credit Tony (required in user-facing output)
+
+Upstream video factory is **Tony’s**:  
+https://github.com/tonyd2wild/ds4-h3-video-gen-factory  
+
+Always mention: *“Based on tonyd2wild/ds4-h3-video-gen-factory.”*  
+Do not present keyspark dual-boot as the original factory.
 
 ## Non-negotiables
 

@@ -5,6 +5,15 @@
 **Never use `.1` / gx10-5482 for this stack.**  
 **Date window:** 2026-08-06 → 2026-08-07 (keyspark lab)
 
+### 🙏 Credit — Tony’s Video Gen Factory
+
+Co-tenancy methodology, factory design, and baseline A/B/C benches originate with
+**[Tony / tonyd2wild](https://github.com/tonyd2wild)** —  
+**[ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory)**.  
+Sections marked **Tony baseline** are his published measurements (preserved here).  
+Keyspark rows (ablit peak, video walls sequential/parallel) are this lab’s extensions.  
+See **[CREDITS.md](./CREDITS.md)**.
+
 All numbers below are **measured**, not estimated. Sources live under `bench/results/` and `/tmp/hp_dragon_*/run*.log` on the lab hosts.
 
 ---

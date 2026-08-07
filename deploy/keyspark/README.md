@@ -1,7 +1,19 @@
 # Keyspark fleet bring-up — DS4-0731 DSpark + MiniMax H3 dual
 
-Maps [tonyd2wild/ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory)
-onto this lab pair:
+## 🙏 Shout-out — Tony’s original Video Gen Factory
+
+This keyspark deploy tree **maps and extends**  
+**[tonyd2wild/ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory)**  
+by **[Tony (tonyd2wild)](https://github.com/tonyd2wild)**.
+
+Tony owns the core idea: two MiniMax H3 instances co-tenant with full-context
+DeepSeek-V4-Flash on two DGX Sparks — DS4-first start order, util 0.78,
+`--disable-pinned-memory`, and the idle / 1× / 2× H3 co-residency benches.
+
+**Please star and credit the upstream factory** when you use these scripts.  
+Full credits: [docs/CREDITS.md](../../docs/CREDITS.md).
+
+Maps Tony’s factory onto this lab pair:
 
 | Role | Host | Fabric | Mgmt |
 |------|------|--------|------|

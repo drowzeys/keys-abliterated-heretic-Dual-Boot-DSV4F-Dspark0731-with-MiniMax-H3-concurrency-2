@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Parallel dual-H3 ~10s story via quality keyframes + first/last-frame (FLF).
 
+Built on Tony's dual-H3 + DS4 co-tenancy factory:
+  https://github.com/tonyd2wild/ds4-h3-video-gen-factory  (tonyd2wild)
+Keyspark extension: quality-first parallel path on that foundation.
+
 Priority: **character / identity quality first**. Parallelism is only for wall-clock.
 
 Quality-first design (default H3_QUALITY_ID=1):
