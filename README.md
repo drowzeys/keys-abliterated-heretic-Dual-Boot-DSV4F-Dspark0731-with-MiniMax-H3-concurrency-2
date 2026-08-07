@@ -19,6 +19,28 @@ uncertain it says so.
 
 ---
 
+## ⛳ Start here if you do not have DeepSeek-V4-Flash running yet
+
+**This repo assumes DS4 is already deployed on your Sparks.** It is about running
+video generation *alongside* it, not about getting the language model up in the
+first place.
+
+If you are starting from nothing, deploy DS4 first with the recipe this build
+runs on:
+
+### 👉 [**DeepSeek-v4-Flash-0731-DSpark 1M NVFP4-KV, 2x DGX Spark**](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark)
+
+That is the exact configuration benchmarked here: the 0731 build, DSpark
+speculative decoding, NVFP4 MLA KV cache, TP=2 across two Sparks. Get that
+serving and returning tokens, then come back here and add the video layer.
+
+Other DS4 variants (500K ctx, 900K ctx, abliterated) are on the
+[same profile](https://github.com/tonyd2wild?tab=repositories) if you want a
+different context or memory tradeoff. The co-tenancy behaviour in this repo
+should hold for any of them, but the numbers here were measured on 0731 1M.
+
+---
+
 ## The result
 
 Throughput of DeepSeek-V4-Flash while MiniMax H3 renders on the same nodes.
@@ -210,7 +232,8 @@ they are holding the memory DS4 needs to come back up.
 
 ### The scripts
 
-See [`deploy/`](deploy/).
+See [`deploy/`](deploy/). **Prerequisite: DS4 deployed via the
+[0731 DSpark recipe](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark).**
 
 1. [`deploy/launch_ds4_pair.sh`](deploy/launch_ds4_pair.sh) — DS4 at TP=2 across
    both nodes. **Run this first and let it finish loading** (watch for

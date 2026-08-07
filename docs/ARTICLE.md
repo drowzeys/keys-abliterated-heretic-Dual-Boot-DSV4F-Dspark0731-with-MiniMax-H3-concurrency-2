@@ -219,6 +219,16 @@ arguments and exits 1.
 
 ---
 
+## If you want to run this yourself
+
+**Start with the language model.** This is about adding video *to* a working DS4
+deployment, not about standing DS4 up. The recipe this was built on, and the
+exact configuration benchmarked above:
+
+**[DeepSeek-v4-Flash-0731-DSpark 1M NVFP4-KV, 2x DGX Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark)**
+
+Get that serving tokens first. Then add the video layer from the factory repo.
+
 ## Reproduce it
 
 Everything is in the repo: the harness, raw benchmark output, both deploy
