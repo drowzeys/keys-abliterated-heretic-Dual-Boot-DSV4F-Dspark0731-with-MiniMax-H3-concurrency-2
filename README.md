@@ -267,6 +267,13 @@ Raw output in [`bench/results/`](bench/results/).
 
 ---
 
+## Full write-up
+
+The longer version, including the two wrong turns and why they were wrong:
+[**docs/ARTICLE.md**](docs/ARTICLE.md)
+
+---
+
 ## Honest limitations
 
 - **One hardware configuration.** Two GB10 Sparks. Not validated anywhere else.
