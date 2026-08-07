@@ -160,6 +160,12 @@ Same model, same workflow, 3x the footprint, purely because of available memory.
 **Do not plan capacity from an idle measurement or from a measurement taken on an
 empty box.**
 
+**This is exactly why start order matters.** H3 is not greedy by design, it is
+adaptive: it takes what is there. So whoever loads first defines the split. Load
+DS4 first and it sets a hard floor that H3 then works within. Load H3 first onto
+an empty node and it will take 50 GB simply because 50 GB was available, and DS4
+will not fit afterwards.
+
 ### Utilization is a cliff, not a slope
 
 We swept it. `--gpu-memory-utilization` is a single budget covering weights,
@@ -181,12 +187,36 @@ that is already there. We tried it the other way first and it was wrong.
 
 ## Deploy
 
-See [`deploy/`](deploy/) for the full scripts.
+### 🚨 Start order is not a preference. It is the whole trick.
+
+**Launch DeepSeek-V4-Flash FIRST. Then launch MiniMax H3.**
+
+This is the single most important line in this repo. Reverse it and the setup
+does not work.
+
+H3 sizes itself to the memory that is free when it loads. Start it on an idle
+121 GiB node and it will keep every component resident and take **~50 GB**. DS4
+then needs ~105 GiB and cannot get it, so the language model fails to start.
+
+Start DS4 first and it claims its ~105 GiB up front. H3 then loads into the
+16-18 GiB that remains, evicts components as it goes exactly like it does on a
+24 GB consumer card, and both run.
+
+Same two programs, same two boxes. One order works and the other does not, and
+nothing in either program's output will tell you that is why.
+
+The corollary: **if you restart DS4, stop the H3 instances first.** Otherwise
+they are holding the memory DS4 needs to come back up.
+
+### The scripts
+
+See [`deploy/`](deploy/).
 
 1. [`deploy/launch_ds4_pair.sh`](deploy/launch_ds4_pair.sh) — DS4 at TP=2 across
-   both nodes.
+   both nodes. **Run this first and let it finish loading** (watch for
+   `GPU KV cache size: 1,473,052 tokens`).
 2. [`deploy/launch_h3_instance.sh`](deploy/launch_h3_instance.sh) — one ComfyUI +
-   H3 instance. Run once per node.
+   H3 instance. Run once per node, **only after step 1 is serving**.
 
 ### Non-obvious things that will cost you an evening
 

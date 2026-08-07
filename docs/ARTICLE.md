@@ -69,6 +69,22 @@ as it does on a 3090.
 requirements of the workload.** Ask what the box *allowed* versus what the job
 *needed*. On unified memory those are very different questions.
 
+### Which is why start order is the whole trick
+
+H3 is not greedy by design. It is adaptive: it takes what is free when it loads.
+So **whoever starts first defines the split.**
+
+Start DS4 first and it claims ~105 GiB up front, leaving 16 to 18. H3 then loads
+into that, evicting components as it goes exactly as it does on a 24 GB consumer
+card, and both run.
+
+Start H3 first on an idle node and it will take ~50 GB, simply because 50 GB was
+there. DS4 then needs 105 and cannot get it, and the language model never starts.
+
+Same two programs, same two boxes, and nothing in either program's output tells
+you the order was the problem. If you restart DS4 later, stop the H3 instances
+first for the same reason.
+
 ---
 
 ## Wrong turn two: we tuned the wrong knob

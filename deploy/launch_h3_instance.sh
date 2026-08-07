@@ -4,6 +4,19 @@
 # Two instances on two nodes is the configuration benchmarked in the README.
 set -euo pipefail
 
+# ORDER MATTERS. Run launch_ds4_pair.sh FIRST and let it finish loading.
+# H3 sizes itself to whatever memory is free when it starts: on an idle 121GiB
+# node it keeps every component resident and takes ~50GB, and DS4 (which needs
+# ~105GiB) then cannot start at all. Launch DS4 first and H3 loads into the
+# remaining 16-18GiB, evicting as it goes, and both run. Reversing the order
+# breaks the setup and nothing in either program's output explains why.
+if ! curl -s -m 5 "${DS4_HEALTH:-http://127.0.0.1:8888/v1/models}" >/dev/null 2>&1; then
+  echo "WARNING: DeepSeek-V4-Flash does not look like it is serving yet."
+  echo "         Start it FIRST, or H3 will take the memory it needs."
+  echo "         Set DS4_HEALTH to point at your head node, or SKIP_CHECK=1 to override."
+  [ "${SKIP_CHECK:-0}" = "1" ] || exit 1
+fi
+
 NODE_SSH="${NODE_SSH:?e.g. user@10.0.0.1}"
 H3_DIR="${H3_DIR:?absolute path to the h3 dir on that node, containing ComfyUI/ and models/}"
 IMAGE="${IMAGE:-comfy-h3:gb10}"
