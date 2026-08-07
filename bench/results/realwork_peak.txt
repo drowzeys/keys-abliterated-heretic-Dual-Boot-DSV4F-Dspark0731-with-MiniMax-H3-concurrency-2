@@ -1,0 +1,26 @@
+target http://127.0.0.1:8888/v1   (heavy warm-up first)
+warm check: count300 = 83.1 tok/s (expect 83-84; if much lower, still cold)
+
+shape                  tok    sec    tok/s
+------------------------------------------
+count300 (toy)         600   7.24     82.9
+sql-inserts           1200  15.20     78.9
+json-fixtures         1200  15.40     77.9
+dataclasses            805  10.40     77.4
+env-config             780   9.97     78.2
+csv-to-json            295   4.08     72.4
+csv-to-md              160   2.37     67.6
+add-types              131   1.95     67.0
+crud-endpoints        1400  18.91     74.0
+prose (control)        250   8.15     30.7
+------------------------------------------
+    82.9  count300 (toy)
+    78.9  sql-inserts
+    78.2  env-config
+    77.9  json-fixtures
+    77.4  dataclasses
+    74.0  crud-endpoints
+    72.4  csv-to-json
+    67.6  csv-to-md
+    67.0  add-types
+    30.7  prose (control)

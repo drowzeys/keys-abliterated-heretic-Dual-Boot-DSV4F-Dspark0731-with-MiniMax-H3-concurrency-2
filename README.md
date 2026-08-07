@@ -1,3 +1,56 @@
+# keys-abliterated / heretic Dual-Boot  
+## DSV4F + DSpark 0731 + MiniMax-H3 (concurrency=2)
+
+> **This is the [drowzeys](https://github.com/drowzeys) keyspark fork** of
+> [tonyd2wild/ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory).  
+> GitHub name:
+> [`keys-abliterated-heretic-Dual-Boot-DSV4F-Dspark0731-with-MiniMax-H3-concurrency-2`](https://github.com/drowzeys/keys-abliterated-heretic-Dual-Boot-DSV4F-Dspark0731-with-MiniMax-H3-concurrency-2)
+
+| Layer | What | Nodes |
+|-------|------|--------|
+| **DS4 ablit** | DeepSeek-V4-Flash **0731 abliterated** (L10–35 λ3.5) + DSpark TP=2 · util **0.78** · 1M ctx | `.2` head + `.3` worker |
+| **H3 heretic** | MiniMax H3 ComfyUI + **heretic TE** + Sage/Sol/Spectrum/FBC · **fleet concurrency=2** | `.2:8188` + `.3:8188` |
+| **Video** | Quality-first parallel dual-FLF ~10s (`deploy/keyspark/`) | both H3 arms at once |
+
+```bash
+# dual-boot bring-up (ablit DS4 → heretic H3)
+bash deploy/keyspark/bringup.sh          # STACK=ablit default
+
+# quality dual-H3 10s (concurrency=2)
+bash deploy/keyspark/run_quality_parallel.sh
+```
+
+| Doc | What |
+|-----|------|
+| **[docs/AGENT_ONESHOT_RECIPE.md](docs/AGENT_ONESHOT_RECIPE.md)** | **Point your agent here** — exact dual-Spark bring-up, patches, failure playbook |
+| **[docs/KEYSPARK_RESULTS.md](docs/KEYSPARK_RESULTS.md)** | **Published speeds** — pre/post ablit, H3 upgrade, sequential vs parallel(2) |
+| [deploy/keyspark/README.md](deploy/keyspark/README.md) | Dual-boot ops on keyspark fleet |
+| [deploy/keyspark/STATUS.md](deploy/keyspark/STATUS.md) | Live stack notes |
+| [bench/results/](bench/results/) | Raw C1–C6 + video wall timings |
+
+```bash
+# agent one-shot
+git clone https://github.com/drowzeys/keys-abliterated-heretic-Dual-Boot-DSV4F-Dspark0731-with-MiniMax-H3-concurrency-2.git
+cd keys-abliterated-heretic-Dual-Boot-DSV4F-Dspark0731-with-MiniMax-H3-concurrency-2
+bash deploy/keyspark/bringup.sh && bash deploy/keyspark/run_quality_parallel.sh
+```
+
+### Speed snapshot (measured)
+
+| Workload | Result |
+|----------|--------|
+| DS4 stock idle C1 | 88.9 tok/s |
+| DS4 stock + idle H3 C1 | 83.5 tok/s |
+| DS4 ablit peak (H3 co-res) | **81.5 tok/s** (~same as stock) |
+| DS4 C1 while 2× H3 rendering | 28.5 tok/s |
+| 10s video sequential basic | 680s @ 832×480 |
+| 10s video **parallel** enhanced | **624s** @ 1728×960 |
+| 10s sequential enhanced (est.) | ~851s @ 1728×960 |
+
+Full tables → [docs/KEYSPARK_RESULTS.md](docs/KEYSPARK_RESULTS.md)
+
+---
+
 # DS4 x H3 Video Gen Factory
 
 ![banner](docs/banner.png)

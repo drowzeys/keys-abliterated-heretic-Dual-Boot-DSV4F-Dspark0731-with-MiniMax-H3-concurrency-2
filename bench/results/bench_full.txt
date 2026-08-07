@@ -1,0 +1,28 @@
+=== keyspark-0731-h3-coresident @ http://127.0.0.1:8888/v1 ===
+
+--- [keyspark-0731-h3-coresident] DECODE by content (temp 0, warm) ---
+prompt       tok    sec    tok/s
+count300     600   7.21     83.3
+mult12       900  11.53     78.0
+json60       800  10.19     78.5
+bst          600   8.92     67.2
+story        249   8.36     29.8
+  PEAK 83.3 (count300)   MEAN 67.4
+
+--- [keyspark-0731-h3-coresident] CONCURRENCY (same prompt, 400 tok each) ---
+ conc   ok   agg tok/s  per-stream    wall
+    1    1        70.2        70.2    5.70
+    2    2       103.6        53.6    7.72
+    4    4       157.5        39.9   10.16
+    6    6       202.9        34.5   11.83
+
+--- [keyspark-0731-h3-coresident] PREFILL (TTFT method, 1 output token) ---
+  target  prompt tok     sec     tok/s
+    8000        6234     3.5      1802
+   32000       24900    10.8      2313
+  100000       77790    32.0      2430
+
+===== SUMMARY [keyspark-0731-h3-coresident] =====
+decode peak 83.3 | mean 67.4
+concurrency agg: c1=70  c2=104  c4=158  c6=203
+prefill: 8K=1802t/s  32K=2313t/s  100K=2430t/s

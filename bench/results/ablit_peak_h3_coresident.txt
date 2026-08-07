@@ -1,0 +1,11 @@
+prompt       tok    sec    tok/s
+count300     600   7.37     81.5
+mult12       900  11.80     76.3
+json60       800  10.73     74.5
+bst          600   9.43     63.6
+story        265   8.96     29.6
+PEAK 81.5  MEAN 65.1
+---
+model=deepseek-v4-flash-0731-ablit-l10-35-anchorstock
+condition=H3 co-tenant (possibly rendering)
+compare_stock_coresident_peak=83.3

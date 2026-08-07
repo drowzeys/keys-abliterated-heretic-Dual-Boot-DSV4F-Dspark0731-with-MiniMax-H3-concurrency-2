@@ -1,0 +1,9 @@
+# idle_h3_coresident  (127.0.0.1:8888, deepseek-v4-flash-0731, max_tokens=700)
+ lvl  agg tok/s  per-stream  TTFT mean  TTFT max  tokens    wall  ok
+   1      83.54       85.43      0.169     0.169     600    7.18  1/1
+   2     130.74       67.55       0.23     0.329    1200    9.18  2/2
+   3     170.18       58.51      0.265     0.339    1800   10.58  3/3
+   4     193.91       54.07      0.343     0.409    2500   12.89  4/4
+   5     200.44        43.9      0.366     0.483    3200   15.96  5/5
+   6     242.03       44.12      0.415     0.469    3900   16.11  6/6
+JSON {"label": "idle_h3_coresident", "host": "127.0.0.1:8888", "model": "deepseek-v4-flash-0731", "max_tokens": 700, "rows": [{"level": 1, "ok": 1, "failed": 0, "agg_tps": 83.54, "per_stream_tps": 85.43, "mean_ttft_s": 0.169, "max_ttft_s": 0.169, "tokens": 600, "wall_s": 7.18}, {"level": 2, "ok": 2, "failed": 0, "agg_tps": 130.74, "per_stream_tps": 67.55, "mean_ttft_s": 0.23, "max_ttft_s": 0.329, "tokens": 1200, "wall_s": 9.18}, {"level": 3, "ok": 3, "failed": 0, "agg_tps": 170.18, "per_stream_tps": 58.51, "mean_ttft_s": 0.265, "max_ttft_s": 0.339, "tokens": 1800, "wall_s": 10.58}, {"level": 4, "ok": 4, "failed": 0, "agg_tps": 193.91, "per_stream_tps": 54.07, "mean_ttft_s": 0.343, "max_ttft_s": 0.409, "tokens": 2500, "wall_s": 12.89}, {"level": 5, "ok": 5, "failed": 0, "agg_tps": 200.44, "per_stream_tps": 43.9, "mean_ttft_s": 0.366, "max_ttft_s": 0.483, "tokens": 3200, "wall_s": 15.96}, {"level": 6, "ok": 6, "failed": 0, "agg_tps": 242.03, "per_stream_tps": 44.12, "mean_ttft_s": 0.415, "max_ttft_s": 0.469, "tokens": 3900, "wall_s": 16.11}]}
