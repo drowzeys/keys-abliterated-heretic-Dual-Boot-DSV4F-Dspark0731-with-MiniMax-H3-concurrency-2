@@ -56,11 +56,21 @@ If ESRGAN over-sharpens faces: `H3_UPSCALE=0`.
 H3_I0_REF=/path/to/face.png   # identity for every key (recommended)
 H3_KEY_MODE=face|chain|both   # auto: face if ref else chain
 H3_UPSCALE=0                  # softer, less processed skin
-H3_LEN=124 H3_STEPS=20        # motion arms
+H3_LEN=124 H3_STEPS=20        # motion arms (stock sampler)
 H3_LEN_KF=49 H3_STEPS_KF=20   # keyframes
+
+# H3 Turbo (few-step LoRA) — ~3–5× sample speedup
+bash deploy/keyspark/setup_h3_turbo.sh
+H3_TURBO=1                    # enable MiniMaxH3TurboLoRA + TurboSampler
+H3_STEPS=6                    # recommended 4–8 when turbo (auto-drops to 6 if unset)
+H3_TURBO_LOW_VRAM=1           # optional merge path under tight co-tenancy RAM
 ```
+
+Weights: [QrusherZA/H3_Turbo_ComfyUI](https://huggingface.co/QrusherZA/H3_Turbo_ComfyUI) (ComfyUI-fixed pruned).  
+Original Turbo: [larryvrh/MiniMax-H3-Turbo-Lora](https://huggingface.co/larryvrh/MiniMax-H3-Turbo-Lora).
 
 ## Credit
 
 - Dual-H3 + DS4 co-tenancy factory: **[tonyd2wild/ds4-h3-video-gen-factory](https://github.com/tonyd2wild/ds4-h3-video-gen-factory)**  
 - FLF multishot parallel keys→arms→hardcut: Hermes session refinement on keyspark  
+- H3 Turbo few-step: **larryvrh** + ComfyUI-fixed pack **QrusherZA**

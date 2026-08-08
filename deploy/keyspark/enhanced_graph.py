@@ -2,16 +2,23 @@
 """Build the full heretic-enhanced MiniMax H3 API graph.
 
 Patch chain (matches ~/comfy/h3-enhanced-fullstack.json):
-  UNET → PathchSageAttentionKJ → SolAttnPatch → SpectrumApplyMiniMaxH3
-       → H3FirstBlockCache → BasicGuider / SamplerCustomAdvanced
+  UNET → [optional MiniMaxH3TurboLoRA] → PathchSageAttentionKJ → SolAttnPatch
+       → SpectrumApplyMiniMaxH3 → H3FirstBlockCache → BasicGuider / SamplerCustomAdvanced
   TE: heretic NVFP4
   Post: optional RealESRGAN x2/x4 on decoded frames before CreateVideo
 
-Co-tenancy defaults: 864x480, length=124 (~5.17s), steps=20, res_multistep.
+Turbo (optional): QrusherZA ComfyUI-fixed MiniMax-H3 Turbo LoRA (orig larryvrh)
+  + MiniMaxH3TurboSampler → 4–8 steps instead of ~20 (~3–5× sample speedup).
+  Requires custom_nodes/ComfyUI-MiniMax-H3-Turbo and a turbo .safetensors in models/loras/.
+
+Co-tenancy defaults: 864x480, length=124 (~5.17s), steps=20 (or 6 with turbo).
 """
 from __future__ import annotations
 
 from typing import Any
+
+# Default pruned ComfyUI-fixed weights (matches pruned_int8 base DiT)
+DEFAULT_TURBO_LORA = "minimax_h3_turbo_4step_ckpt500_comfyui_pruned.safetensors"
 
 
 def build_enhanced(
@@ -33,42 +40,60 @@ def build_enhanced(
     spectrum: bool = True,  # requires ComfyUI >=0.30.1 (time_shift_slope in ldm/minimax)
     fbc_threshold: float = 0.08,
     fbc_start_step: int = 3,
+    # turbo LoRA (4–8 step few-step sampling)
+    turbo: bool = False,
+    turbo_lora: str = DEFAULT_TURBO_LORA,
+    turbo_strength: float = 1.0,
+    turbo_low_vram: bool = False,  # True = merge (softer, less peak VRAM under co-tenancy)
     # post
     upscale: str | None = "RealESRGAN_x2plus.pth",  # None to skip
     fps: float = 24.0,
 ) -> dict[str, Any]:
     """Return a ComfyUI API-format prompt graph."""
 
-    # model patch chain endpoints at node "8"
+    # model patch chain — turbo LoRA sits right after UNET (official order)
     g: dict[str, Any] = {
         "6": {
             "class_type": "UNETLoader",
             "inputs": {"unet_name": unet, "weight_dtype": "default"},
         },
-        "50": {
-            "class_type": "PathchSageAttentionKJ",
+    }
+    model_out = ["6", 0]
+    if turbo:
+        g["70"] = {
+            "class_type": "MiniMaxH3TurboLoRA",
             "inputs": {
-                "model": ["6", 0],
-                "sage_attention": sage,
-                "allow_compile": False,
+                "model": model_out,
+                "lora_name": turbo_lora,
+                "strength": float(turbo_strength),
+                "low_vram": bool(turbo_low_vram),
             },
+        }
+        model_out = ["70", 0]
+
+    g["50"] = {
+        "class_type": "PathchSageAttentionKJ",
+        "inputs": {
+            "model": model_out,
+            "sage_attention": sage,
+            "allow_compile": False,
         },
-        "7": {
-            "class_type": "SolAttnPatch",
-            "inputs": {
-                "model": ["50", 0],
-                "tau": sol_tau,
-                "start_percent": 0.2,
-                "end_percent": 0.9,
-                "min_tokens": 4096,
-                "int8_qk": True,
-                "sink_conditioning": "exact_kv_and_rows",
-                "morton": False,
-                "morton_curve": "2d_frame",
-                "verbose": False,
-                # TMA: peak VRAM spike; leave off under DS4 co-tenancy
-                "use_tma": False,
-            },
+    }
+    g["7"] = {
+        "class_type": "SolAttnPatch",
+        "inputs": {
+            "model": ["50", 0],
+            "tau": sol_tau,
+            "start_percent": 0.2,
+            "end_percent": 0.9,
+            "min_tokens": 4096,
+            "int8_qk": True,
+            "sink_conditioning": "exact_kv_and_rows",
+            "morton": False,
+            "morton_curve": "2d_frame",
+            "verbose": False,
+            # TMA: peak VRAM spike; leave off under DS4 co-tenancy
+            "use_tma": False,
         },
     }
 
@@ -96,15 +121,16 @@ def build_enhanced(
     else:
         fbc_in = ["7", 0]
 
+    # FBC on turbo: denser early steps matter less with 4–8 total; still useful
     g.update({
         "8": {
             "class_type": "H3FirstBlockCache",
             "inputs": {
                 "model": fbc_in,
                 "threshold": fbc_threshold,
-                "start_step": fbc_start_step,
-                "end_dense_steps": 2,
-                "max_consecutive_skips": 2,
+                "start_step": fbc_start_step if not turbo else 1,
+                "end_dense_steps": 2 if not turbo else 1,
+                "max_consecutive_skips": 2 if not turbo else 1,
             },
         },
         "13": {
@@ -135,10 +161,6 @@ def build_enhanced(
             },
         },
         "15": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
-        "17": {
-            "class_type": "KSamplerSelect",
-            "inputs": {"sampler_name": "res_multistep"},
-        },
         "9": {
             "class_type": "BasicScheduler",
             "inputs": {
@@ -152,6 +174,18 @@ def build_enhanced(
             "class_type": "BasicGuider",
             "inputs": {"model": ["8", 0], "conditioning": ["104", 0]},
         },
+    })
+
+    # Sampler: turbo dual-schedule vs stock res_multistep
+    if turbo:
+        g["17"] = {"class_type": "MiniMaxH3TurboSampler", "inputs": {}}
+    else:
+        g["17"] = {
+            "class_type": "KSamplerSelect",
+            "inputs": {"sampler_name": "res_multistep"},
+        }
+
+    g.update({
         "14": {
             "class_type": "SamplerCustomAdvanced",
             "inputs": {

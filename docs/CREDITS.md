@@ -44,6 +44,8 @@ Extensions **on top of** Tony’s factory, not instead of it:
 | MiniMax H3 | MiniMax |
 | Heretic TE / Sol-Engine / Spectrum / SolAttn ports | respective authors; wired here for dual-Spark heretic stack |
 | ComfyUI | Comfy Org |
+| **MiniMax-H3 Turbo LoRA** (few-step 4–8) | **[larryvrh/MiniMax-H3-Turbo-Lora](https://huggingface.co/larryvrh/MiniMax-H3-Turbo-Lora)** + **[ComfyUI-MiniMax-H3-Turbo](https://github.com/Larryvrh/ComfyUI-MiniMax-H3-Turbo)** |
+| **ComfyUI-fixed pruned Turbo weights** | **[QrusherZA/H3_Turbo_ComfyUI](https://huggingface.co/QrusherZA/H3_Turbo_ComfyUI)** (prefix/adaln fix for pruned bases; QrusherZA asks not to take credit for the Turbo training itself) |
 
 ---
 

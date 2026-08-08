@@ -105,6 +105,13 @@ class MultishotConfig:
     worker: str = WORKER
     # hard-cut only (seamless by shared keys)
     hardcut: bool = True
+    # H3 Turbo LoRA (few-step) — QrusherZA ComfyUI-fixed / larryvrh original
+    turbo: bool = os.environ.get("H3_TURBO", "0") not in ("0", "false", "no", "")
+    turbo_lora: str = os.environ.get(
+        "H3_TURBO_LORA", "minimax_h3_turbo_4step_ckpt500_comfyui_pruned.safetensors"
+    )
+    turbo_strength: float = float(os.environ.get("H3_TURBO_STRENGTH", "1.0"))
+    turbo_low_vram: bool = os.environ.get("H3_TURBO_LOW_VRAM", "0") not in ("0", "false", "no", "")
 
     def __post_init__(self):
         if isinstance(self.out_dir, str):
@@ -123,6 +130,12 @@ class MultishotConfig:
             self.i0_ref = str(Path(self.i0_ref).expanduser().resolve())
         if self.key_mode == "auto":
             self.key_mode = "face" if self.i0_ref else "chain"
+        # When turbo is on and steps still look like the 20-step default, drop to 6
+        # (best quality in the 4–8 turbo band per larryvrh README).
+        if self.turbo and self.steps >= 16 and "H3_STEPS" not in os.environ and "STEPS" not in os.environ:
+            self.steps = 6
+        if self.turbo and self.kf_steps >= 16 and "H3_STEPS_KF" not in os.environ:
+            self.kf_steps = 6
 
     def full_prompt(self, body: str) -> str:
         parts = []
@@ -257,11 +270,17 @@ def render(
     spectrum: bool,
     upscale: str | None,
     work: Path,
+    turbo: bool = False,
+    turbo_lora: str = "minimax_h3_turbo_4step_ckpt500_comfyui_pruned.safetensors",
+    turbo_strength: float = 1.0,
+    turbo_low_vram: bool = False,
 ) -> Path:
     g = build_enhanced(
         prompt, seed=seed, width=width, height=height, length=length, steps=steps,
         prefix=prefix, first_frame=first or None, last_frame=last or None,
         sage="auto", spectrum=spectrum, upscale=upscale,
+        turbo=turbo, turbo_lora=turbo_lora, turbo_strength=turbo_strength,
+        turbo_low_vram=turbo_low_vram,
     )
     pid = queue(host, g, label)
     print(
@@ -357,6 +376,8 @@ def run_multishot(cfg: MultishotConfig) -> Path:
         f"key_mode={cfg.key_mode} natural_skin={cfg.natural_skin}\n"
         f"  spectrum={cfg.spectrum} upscale={cfg.upscale}  "
         f"kf={cfg.kf_frames}x{cfg.kf_steps} arm={cfg.arm_frames}x{cfg.steps}\n"
+        f"  turbo={cfg.turbo} lora={cfg.turbo_lora if cfg.turbo else '-'} "
+        f"strength={cfg.turbo_strength} low_vram={cfg.turbo_low_vram}\n"
         f"  hardcut={cfg.hardcut}  (seam = shared key pixels, no xfade)",
         flush=True,
     )
@@ -411,6 +432,8 @@ def run_multishot(cfg: MultishotConfig) -> Path:
             width=cfg.width, height=cfg.height, spectrum=cfg.spectrum,
             upscale=None,  # keys at native res; upscale only motion arms
             work=cfg.work_dir,
+            turbo=cfg.turbo, turbo_lora=cfg.turbo_lora,
+            turbo_strength=cfg.turbo_strength, turbo_low_vram=cfg.turbo_low_vram,
         )
         key_png = cfg.work_dir / f"K{i}.png"
         extract_frame(vid, key_png, "last")
@@ -442,6 +465,8 @@ def run_multishot(cfg: MultishotConfig) -> Path:
                 cfg.arm_frames, cfg.steps, key_names[i], key_names[i + 1],
                 width=cfg.width, height=cfg.height, spectrum=cfg.spectrum,
                 upscale=cfg.upscale, work=cfg.work_dir,
+                turbo=cfg.turbo, turbo_lora=cfg.turbo_lora,
+                turbo_strength=cfg.turbo_strength, turbo_low_vram=cfg.turbo_low_vram,
             )
 
         arm_jobs.append((host, f"arm{fn}", make_job()))
@@ -480,11 +505,13 @@ def run_multishot(cfg: MultishotConfig) -> Path:
         f"keys={n_keys} arms={n_arms}\n"
         f"key_mode={cfg.key_mode} natural_skin={cfg.natural_skin}\n"
         f"spectrum={cfg.spectrum} upscale={cfg.upscale}\n"
+        f"turbo={cfg.turbo} turbo_lora={cfg.turbo_lora if cfg.turbo else ''} "
+        f"steps={cfg.steps} kf_steps={cfg.kf_steps}\n"
         f"i0_ref={cfg.i0_ref or ''}\n"
         f"hardcut=True\n"
         f"duration_s={dur:.2f}\n"
         f"note=prev last frame == next first frame (shared key PNG); concurrency=2 waves\n"
-        f"credit=tonyd2wild factory + Hermes FLF multishot architecture\n"
+        f"credit=tonyd2wild factory + Hermes FLF + larryvrh/QrusherZA H3 Turbo\n"
     )
     (cfg.out_dir / "TIMING.txt").write_text(timing)
     print(f"\nDone in {total:.0f}s wall (~{total / 60:.1f} min)  duration={dur:.2f}s", flush=True)

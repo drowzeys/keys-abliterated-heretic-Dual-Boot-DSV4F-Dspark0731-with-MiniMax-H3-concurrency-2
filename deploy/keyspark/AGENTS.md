@@ -35,9 +35,12 @@ Prefer real pore texture language in prompts; skip ESRGAN if skin looks over-pro
 
 ```bash
 bash deploy/keyspark/bringup.sh
+bash deploy/keyspark/setup_h3_turbo.sh               # once: Turbo LoRA + nodes
 bash deploy/keyspark/status.sh
 bash deploy/keyspark/run_quality_parallel.sh          # FLF multishot HP dragon
 H3_I0_REF=/path/to/face.png bash deploy/keyspark/run_quality_parallel.sh
+# few-step turbo (~4–8 steps, much faster sampling):
+H3_TURBO=1 bash deploy/keyspark/run_quality_parallel.sh
 # longer FLF stories (Hermes scripts):
 python3 deploy/keyspark/connelly_flf_20s.py
 python3 deploy/keyspark/connelly_flf_30s.py
