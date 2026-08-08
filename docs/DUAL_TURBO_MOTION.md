@@ -40,22 +40,40 @@ Cite **@ANe5s** if you publish results using this recipe.
 
 ---
 
-## 2. Motion Context (audio continuity)
+## 2. Motion Context (audio continuity) — proper keyspark adaptation
 
 **Repo:** [NikoDemon80/ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context)
 
 Pins previous clip’s last **22** frames + audio onto the next clip’s timeline so the model **continues the same waveform**, not a sound-alike.
 
-| Setting | Value |
-|---------|--------|
-| context_length | 22 |
-| audio_context_length | 22 |
-| audio_mode | `timeline` |
-| encode_mode | `video` |
-| anchor_mode | `head` |
-| Spectrum | **OFF** (required) |
+### API graph wiring (implemented in `enhanced_graph.py`)
 
-Install: drop into `custom_nodes/` (already on keyspark `.2`/`.3` after setup).
+```
+arm N-1:  Sampler → SaveLatent(clip_index=N-1) → decode → SaveVideo
+arm N:    VHS_LoadVideoPath(abs prev mp4)
+            → IMAGE + AUDIO
+          MiniMaxH3ImageToVideo (first=K_i, last=K_{i+1})
+          LoadLatent(clip_index=N-1)  → context_latent (preferred)
+          MotionContext(context_frames, context_audio, context_latent?, audio_mode=timeline)
+            → Guider → dual-turbo samplers → decode
+          Trim(trim_frames, match_tail=true) → CreateVideo
+          SaveLatent(clip_index=N)
+```
+
+| Setting | Value | Notes |
+|---------|--------|--------|
+| context_length | **22** | VAE grid; last 22 frames of prev |
+| audio_context_length | **22** | end-aligned with video pin |
+| audio_mode | **timeline** | true waveform continue (not ref sound-alike) |
+| encode_mode | **video** | one VAE call for motion |
+| anchor_mode | **head** | requires Trim |
+| Spectrum | **OFF** | required (pinned rows break forecast) |
+| prev video path | abs path via `scp` to `ComfyUI/input/mc_prev_arm*.mp4` | VHS_LoadVideoPath |
+| latent slots | `output/h3_context/clip_0000N.safetensors` | Save/Load clip_index |
+
+**Arms are sequential on HEAD** when MC is on (latents + prev video stay local). Dual-turbo still runs per arm; dual-box parallelism is for non-MC runs.
+
+Install: `bash deploy/keyspark/setup_h3_turbo.sh` (also installs Motion Context).
 
 ---
 

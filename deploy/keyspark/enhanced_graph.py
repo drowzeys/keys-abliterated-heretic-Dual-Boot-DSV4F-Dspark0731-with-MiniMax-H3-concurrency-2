@@ -214,38 +214,59 @@ def build_enhanced(
         }
         g["104"]["inputs"]["last_frame"] = ["106", 0]
 
-    # --- conditioning (optional motion context) ---
+    # --- conditioning (optional Motion Context — NikoDemon80) ---
+    # Correct wiring (matches upstream README / example workflow):
+    #   prev clip frames+audio → MiniMaxH3MotionContext → Guider
+    #   sampler latent → SaveLatent(clip N)
+    #   next run: LoadLatent(clip N-1) → context_latent (preferred audio path)
+    #   decode → Trim(trim_frames) → CreateVideo
+    # Spectrum must be OFF (already forced above).
     cond_src: list = ["104", 0]
     trim_frames_src = None
     use_mc = bool(motion_context and prev_video)
     if use_mc:
-        g["80"] = {"class_type": "LoadVideo", "inputs": {"file": prev_video}}
-        g["81"] = {
-            "class_type": "GetVideoComponents",
-            "inputs": {"video": ["80", 0]},
+        # VHS path loader: absolute path on the Comfy host (reliable for API).
+        # Outputs IMAGE + AUDIO directly (no GetVideoComponents needed).
+        g["80"] = {
+            "class_type": "VHS_LoadVideoPath",
+            "inputs": {
+                "video": prev_video,  # abs path e.g. .../input/mc_prev_arm1.mp4
+                "force_rate": float(fps),
+                "custom_width": 0,
+                "custom_height": 0,
+                "frame_load_cap": 0,
+                "skip_first_frames": 0,
+                "select_every_nth": 1,
+            },
         }
         mc_inputs: dict[str, Any] = {
             "conditioning": ["104", 0],
             "vae": ["11", 0],
             "latent": ["104", 1],
-            "context_frames": ["81", 0],
-            "context_length": int(context_length),
-            "encode_mode": encode_mode,
-            "anchor_mode": anchor_mode,
+            "context_frames": ["80", 0],  # IMAGE batch (tail used by MC)
+            "context_length": int(context_length),  # 22 recommended
+            "encode_mode": encode_mode,  # "video"
+            "anchor_mode": anchor_mode,  # "head" → trim after
             "crop": "disabled",
-            "audio_context_length": int(audio_context_length),
-            "audio_mode": audio_mode,
+            "audio_context_length": int(audio_context_length),  # 22
+            "audio_mode": audio_mode,  # "timeline" = true continuation
+            # decoded-audio fallback (used when no prior SaveLatent)
             "audio_vae": ["24", 0],
-            "context_audio": ["81", 1],
+            "context_audio": ["80", 2],  # AUDIO from VHS_LoadVideoPath
         }
+        # Prefer latent chain when continuing from clip >= 2 (skips audio VAE re-encode)
         if motion_clip_index > 1:
             g["82"] = {
                 "class_type": "MiniMaxH3MotionContextLoadLatent",
                 "inputs": {
-                    "latent_path": motion_latent_prefix.rsplit("/", 1)[0]
-                    if "/" in motion_latent_prefix
-                    else "h3_context",
-                    "clip_index": int(motion_clip_index - 1),
+                    # folder relative to ComfyUI output/ — Save writes
+                    # output/h3_context/clip_0000N.safetensors
+                    "latent_path": (
+                        motion_latent_prefix.rsplit("/", 1)[0]
+                        if "/" in motion_latent_prefix
+                        else "h3_context"
+                    ),
+                    "clip_index": int(motion_clip_index - 1),  # CONTINUE FROM prev
                 },
             }
             mc_inputs["context_latent"] = ["82", 0]
@@ -418,7 +439,9 @@ def build_enhanced(
         "inputs": {"samples": final_latent, "vae": ["24", 0]},
     }
 
-    if motion_context and motion_clip_index > 0:
+    # Always save AV latent when clip_index is set (including arm1 with no prev context)
+    # so the next arm can LoadLatent without failing on a missing h3_context folder.
+    if motion_clip_index > 0:
         g["84"] = {
             "class_type": "MiniMaxH3MotionContextSaveLatent",
             "inputs": {

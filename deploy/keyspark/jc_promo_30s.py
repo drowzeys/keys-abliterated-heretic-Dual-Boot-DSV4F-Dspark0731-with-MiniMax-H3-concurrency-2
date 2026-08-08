@@ -151,26 +151,54 @@ def main():
         print("ERROR: set H3_I0_REF to the Jennifer reference image", file=sys.stderr)
         sys.exit(1)
 
-    # Turbo default ON for 30s wall-clock; override with H3_TURBO=0
+    # Defaults for HQ re-render: dual turbo + motion context (override with =0)
+    if "H3_DUAL_TURBO" not in os.environ:
+        os.environ["H3_DUAL_TURBO"] = "1"
+    if "H3_MOTION_CONTEXT" not in os.environ:
+        os.environ["H3_MOTION_CONTEXT"] = "1"
     if "H3_TURBO" not in os.environ:
         os.environ["H3_TURBO"] = "1"
+
+    def _env_bool(k: str, default: str = "0") -> bool:
+        return os.environ.get(k, default) not in ("0", "false", "no", "")
+
+    dual = _env_bool("H3_DUAL_TURBO", "1")
+    mctx = _env_bool("H3_MOTION_CONTEXT", "1")
+    turbo = _env_bool("H3_TURBO", "1") or dual
 
     cfg = MultishotConfig(
         key_prompts=KEY_PROMPTS,
         arm_prompts=ARM_PROMPTS,
         look="",  # already embedded in each prompt
         natural_skin=True,
-        out_dir=Path(os.environ.get("OUT_DIR", str(Path.home() / "Videos" / "jc_promo_30s"))),
-        work_dir=Path(os.environ.get("WORK_DIR", "/tmp/jc_promo_30s")),
-        final_name="jc_promo_ablit_h3_turbo_30s.mp4",
+        out_dir=Path(os.environ.get("OUT_DIR", str(Path.home() / "Videos" / "jc_promo_30s_mc"))),
+        work_dir=Path(os.environ.get("WORK_DIR", "/tmp/jc_promo_30s_mc")),
+        final_name="jc_promo_ablit_h3_dual_turbo_mc_30s.mp4",
         width=W,
         height=H,
         i0_ref=ref,
         key_mode=os.environ.get("H3_KEY_MODE", "face"),
         hardcut=True,
+        turbo=turbo,
+        dual_turbo=dual,
+        motion_context=mctx,
+        spectrum=not mctx,  # Motion Context requires Spectrum off
+        turbo_lora_rough=os.environ.get(
+            "H3_TURBO_LORA_ROUGH", "minimax_h3_turbo_4step_ckpt850.safetensors"
+        ),
+        turbo_strength_rough=float(os.environ.get("H3_TURBO_STRENGTH_ROUGH", "1.0")),
+        turbo_steps_rough=int(os.environ.get("H3_TURBO_STEPS_ROUGH", "6")),
+        turbo_lora_refine=os.environ.get(
+            "H3_TURBO_LORA_REFINE", "minimax_h3_turbo_4step_ckpt500_comfyui_pruned.safetensors"
+        ),
+        turbo_strength_refine=float(os.environ.get("H3_TURBO_STRENGTH_REFINE", "0.7")),
+        turbo_steps_refine=int(os.environ.get("H3_TURBO_STEPS_REFINE", "8")),
+        context_length=int(os.environ.get("H3_CONTEXT_LENGTH", "22")),
+        audio_context_length=int(os.environ.get("H3_AUDIO_CONTEXT_LENGTH", "22")),
     )
     print(
-        f"JC promo 30s  {W}x{H} portrait  turbo={cfg.turbo} steps={cfg.steps}  ref={ref}",
+        f"JC promo 30s  {W}x{H} portrait  dual_turbo={cfg.dual_turbo} "
+        f"motion_context={cfg.motion_context} turbo={cfg.turbo}  ref={ref}",
         flush=True,
     )
     run_multishot(cfg)

@@ -520,6 +520,9 @@ def run_multishot(cfg: MultishotConfig) -> Path:
     t1 = time.time()
 
     def arm_kwargs(i: int, prev_vid_name: str | None):
+        # Apply Motion Context from arm2 onward (needs previous clip).
+        # Always assign motion_clip_index when MC enabled so arm1 still *saves*
+        # its AV latent for arm2 to load (fixes missing h3_context/ folder).
         return dict(
             width=cfg.width,
             height=cfg.height,
@@ -537,7 +540,7 @@ def run_multishot(cfg: MultishotConfig) -> Path:
             turbo_lora_refine=cfg.turbo_lora_refine,
             turbo_strength_refine=cfg.turbo_strength_refine,
             turbo_steps_refine=cfg.turbo_steps_refine,
-            motion_context=cfg.motion_context and i > 0,
+            motion_context=cfg.motion_context and i > 0 and bool(prev_vid_name),
             prev_video=prev_vid_name,
             context_length=cfg.context_length,
             audio_context_length=cfg.audio_context_length,
@@ -546,24 +549,53 @@ def run_multishot(cfg: MultishotConfig) -> Path:
 
     all_arms: list[Path] = []
     if sequential:
-        # stay on HEAD so Motion Context latents + prev video stay local
+        # stay on HEAD so Motion Context latents + prev video stay on one host
         host = cfg.head
-        prev_name: str | None = None
+        host_ip = host.split(":")[0]
+        # ComfyUI paths on the remote box (keyspark dual-boot layout)
+        comfy_root = os.environ.get(
+            "H3_COMFY_ROOT", "/home/keyspark/h3-cotenancy/ComfyUI"
+        )
+        input_dir = f"{comfy_root}/input"
+        out_ctx = f"{comfy_root}/output/h3_context"
+        # ensure latent folder exists before any Load
+        try:
+            subprocess.check_call(
+                ["ssh", f"keyspark@{host_ip}", f"mkdir -p {out_ctx} {input_dir}"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
+            print(f"  [warn] mkdir comfy dirs: {e}", flush=True)
+
+        prev_host_path: str | None = None
         for i in range(n_arms):
             fn = i + 1
             ap = cfg.full_prompt(cfg.arm_prompts[i])
             if i > 0:
-                # upload previous arm video into Comfy input for LoadVideo
+                # scp previous arm mp4 to a stable absolute path for VHS_LoadVideoPath
                 prev_path = all_arms[-1]
-                prev_name = upload_image(host, prev_path, f"prev_arm{i}.mp4")
-                # LoadVideo expects video in input; upload_image puts in input — good
+                prev_host_path = f"{input_dir}/mc_prev_arm{i}.mp4"
+                subprocess.check_call(
+                    ["scp", "-q", str(prev_path), f"keyspark@{host_ip}:{prev_host_path}"],
+                )
+                print(f"  mc prev → {host_ip}:{prev_host_path}", flush=True)
             p = render(
                 host, f"arm{fn}", ap, cfg.seed + 100 + i, f"video/arm{fn}",
                 cfg.arm_frames, cfg.steps, key_names[i], key_names[i + 1],
-                **arm_kwargs(i, prev_name),
+                **arm_kwargs(i, prev_host_path),
             )
             all_arms.append(p)
             shutil.copy2(p, cfg.out_dir / f"arm{fn}.mp4")
+            # confirm SaveLatent wrote clip slot (arm index 1-based)
+            if cfg.motion_context:
+                try:
+                    listing = subprocess.check_output(
+                        ["ssh", f"keyspark@{host_ip}", f"ls -la {out_ctx}/ 2>/dev/null || true"],
+                        text=True,
+                    )
+                    print(f"  h3_context after arm{fn}:\n{listing}", flush=True)
+                except Exception:
+                    pass
     else:
         arm_jobs: list[tuple[str, str, Callable[[], Path]]] = []
         for i in range(n_arms):
