@@ -20,11 +20,26 @@ Do not present keyspark dual-boot as the original factory.
 - H3 fleet concurrency **2** = one heavy job per Spark
 - Default stack: ablit DS4 + heretic H3 (`STACK=ablit`)
 
+## Video pipeline (default) — FLF multishot
+
+Hermes-refined architecture (do not “simplify” to xfade dual T2V):
+
+1. Sequential shared **keyframes** (first/last images)
+2. Parallel arms with `first=K_i` `last=K_{i+1}` on both H3 boxes
+3. **Hard-cut** stitch only (prev last == next first → seamless)
+
+Natural skin / anti-plastic look is ON by default (`multishot_flf.NATURAL_SKIN`).
+Prefer real pore texture language in prompts; skip ESRGAN if skin looks over-processed (`H3_UPSCALE=0`).
+
 ## Commands
 
 ```bash
 bash deploy/keyspark/bringup.sh
 bash deploy/keyspark/status.sh
-bash deploy/keyspark/run_quality_parallel.sh
+bash deploy/keyspark/run_quality_parallel.sh          # FLF multishot HP dragon
+H3_I0_REF=/path/to/face.png bash deploy/keyspark/run_quality_parallel.sh
+# longer FLF stories (Hermes scripts):
+python3 deploy/keyspark/connelly_flf_20s.py
+python3 deploy/keyspark/connelly_flf_30s.py
 bash deploy/keyspark/teardown.sh
 ```

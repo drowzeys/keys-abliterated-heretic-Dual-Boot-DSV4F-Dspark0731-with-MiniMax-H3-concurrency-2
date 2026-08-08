@@ -39,12 +39,16 @@ Never use `.1` / gx10-5482 for this stack.
                     └─────────────────────────────────────┘
 ```
 
-Quality video path (`keyframe_dual_flf.py`):
+Quality video path — **FLF multishot** (Hermes architecture, default):
 
-1. **Phase 0** parallel — I0 human (full steps, optional face ref) on `.2` ‖ I1 mid dragon on `.3`
-2. **Phase 1** — I2 end on free box
-3. **Phase 2** parallel — full 5s FLF part A ‖ part B
-4. **Phase 3** — stitch ~10s
+Engine: `multishot_flf.py` · runner: `keyframe_dual_flf.py` / `run_quality_parallel.sh`
+
+1. **Phase 0** sequential quality **keyframes** K0…KN on `.2` (optional `H3_I0_REF` face lock; natural skin ON)
+2. **Phase 1** parallel motion arms (concurrency=2): arm_i **first=K_i last=K_{i+1}** on `.2` ‖ `.3`
+   — previous segment’s last image **is** the next segment’s first image (shared PNG)
+3. **Phase 2** **hard-cut** concat (no xfade) → continuous by construction
+
+Longer stories: `connelly_flf_20s.py` / `connelly_flf_30s.py` (same engine pattern, more arms).
 
 ## Critical co-tenancy rules (from Tony)
 
