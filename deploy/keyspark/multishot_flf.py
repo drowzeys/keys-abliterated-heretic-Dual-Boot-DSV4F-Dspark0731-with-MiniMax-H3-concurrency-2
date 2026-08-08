@@ -112,6 +112,25 @@ class MultishotConfig:
     )
     turbo_strength: float = float(os.environ.get("H3_TURBO_STRENGTH", "1.0"))
     turbo_low_vram: bool = os.environ.get("H3_TURBO_LOW_VRAM", "0") not in ("0", "false", "no", "")
+    # Dual-sampler quality (ANe5s HF discussion #21) — rough ckpt850 then refine ckpt500
+    # https://huggingface.co/larryvrh/MiniMax-H3-Turbo-Lora/discussions/21
+    dual_turbo: bool = os.environ.get("H3_DUAL_TURBO", "0") not in ("0", "false", "no", "")
+    turbo_lora_rough: str = os.environ.get(
+        "H3_TURBO_LORA_ROUGH", "minimax_h3_turbo_4step_ckpt850.safetensors"
+    )
+    turbo_steps_rough: int = int(os.environ.get("H3_TURBO_STEPS_ROUGH", "6"))
+    turbo_strength_rough: float = float(os.environ.get("H3_TURBO_STRENGTH_ROUGH", "1.0"))
+    turbo_lora_refine: str = os.environ.get(
+        "H3_TURBO_LORA_REFINE", "minimax_h3_turbo_4step_ckpt500_comfyui_pruned.safetensors"
+    )
+    turbo_steps_refine: int = int(os.environ.get("H3_TURBO_STEPS_REFINE", "8"))
+    turbo_strength_refine: float = float(os.environ.get("H3_TURBO_STRENGTH_REFINE", "0.7"))
+    # Motion Context — true audio/motion continuation (NikoDemon80)
+    # https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context
+    # Forces sequential arms + Spectrum off.
+    motion_context: bool = os.environ.get("H3_MOTION_CONTEXT", "0") not in ("0", "false", "no", "")
+    context_length: int = int(os.environ.get("H3_CONTEXT_LENGTH", "22"))
+    audio_context_length: int = int(os.environ.get("H3_AUDIO_CONTEXT_LENGTH", "22"))
 
     def __post_init__(self):
         if isinstance(self.out_dir, str):
@@ -130,12 +149,16 @@ class MultishotConfig:
             self.i0_ref = str(Path(self.i0_ref).expanduser().resolve())
         if self.key_mode == "auto":
             self.key_mode = "face" if self.i0_ref else "chain"
-        # When turbo is on and steps still look like the 20-step default, drop to 6
-        # (best quality in the 4–8 turbo band per larryvrh README).
-        if self.turbo and self.steps >= 16 and "H3_STEPS" not in os.environ and "STEPS" not in os.environ:
+        if self.dual_turbo:
+            self.turbo = True
+            # dual path uses rough+refine step counts, not self.steps
+        elif self.turbo and self.steps >= 16 and "H3_STEPS" not in os.environ and "STEPS" not in os.environ:
             self.steps = 6
         if self.turbo and self.kf_steps >= 16 and "H3_STEPS_KF" not in os.environ:
             self.kf_steps = 6
+        # Motion context + dual turbo: Spectrum must stay off (set in graph)
+        if self.motion_context:
+            self.spectrum = False
 
     def full_prompt(self, body: str) -> str:
         parts = []
@@ -274,6 +297,18 @@ def render(
     turbo_lora: str = "minimax_h3_turbo_4step_ckpt500_comfyui_pruned.safetensors",
     turbo_strength: float = 1.0,
     turbo_low_vram: bool = False,
+    dual_turbo: bool = False,
+    turbo_lora_rough: str = "minimax_h3_turbo_4step_ckpt850.safetensors",
+    turbo_strength_rough: float = 1.0,
+    turbo_steps_rough: int = 6,
+    turbo_lora_refine: str = "minimax_h3_turbo_4step_ckpt500_comfyui_pruned.safetensors",
+    turbo_strength_refine: float = 0.7,
+    turbo_steps_refine: int = 8,
+    motion_context: bool = False,
+    prev_video: str | None = None,
+    context_length: int = 22,
+    audio_context_length: int = 22,
+    motion_clip_index: int = 0,
 ) -> Path:
     g = build_enhanced(
         prompt, seed=seed, width=width, height=height, length=length, steps=steps,
@@ -281,11 +316,29 @@ def render(
         sage="auto", spectrum=spectrum, upscale=upscale,
         turbo=turbo, turbo_lora=turbo_lora, turbo_strength=turbo_strength,
         turbo_low_vram=turbo_low_vram,
+        dual_turbo=dual_turbo,
+        turbo_lora_rough=turbo_lora_rough,
+        turbo_strength_rough=turbo_strength_rough,
+        turbo_steps_rough=turbo_steps_rough,
+        turbo_lora_refine=turbo_lora_refine,
+        turbo_strength_refine=turbo_strength_refine,
+        turbo_steps_refine=turbo_steps_refine,
+        motion_context=motion_context,
+        prev_video=prev_video,
+        context_length=context_length,
+        audio_context_length=audio_context_length,
+        motion_clip_index=motion_clip_index,
     )
     pid = queue(host, g, label)
+    step_info = (
+        f"dual={turbo_steps_rough}+{turbo_steps_refine}"
+        if dual_turbo
+        else f"steps={steps}"
+    )
     print(
         f"  [{label}] queued {pid} on {host}  "
-        f"len={length} steps={steps} first={bool(first)} last={bool(last)}",
+        f"len={length} {step_info} first={bool(first)} last={bool(last)} "
+        f"mc={bool(prev_video)} dual_turbo={dual_turbo}",
         flush=True,
     )
     entry = wait_done(host, pid, label)
@@ -376,8 +429,11 @@ def run_multishot(cfg: MultishotConfig) -> Path:
         f"key_mode={cfg.key_mode} natural_skin={cfg.natural_skin}\n"
         f"  spectrum={cfg.spectrum} upscale={cfg.upscale}  "
         f"kf={cfg.kf_frames}x{cfg.kf_steps} arm={cfg.arm_frames}x{cfg.steps}\n"
-        f"  turbo={cfg.turbo} lora={cfg.turbo_lora if cfg.turbo else '-'} "
-        f"strength={cfg.turbo_strength} low_vram={cfg.turbo_low_vram}\n"
+        f"  turbo={cfg.turbo} dual_turbo={cfg.dual_turbo} "
+        f"motion_context={cfg.motion_context}\n"
+        f"  dual: rough={cfg.turbo_lora_rough}@{cfg.turbo_strength_rough} "
+        f"x{cfg.turbo_steps_rough} → refine={cfg.turbo_lora_refine}"
+        f"@{cfg.turbo_strength_refine} x{cfg.turbo_steps_refine}\n"
         f"  hardcut={cfg.hardcut}  (seam = shared key pixels, no xfade)",
         flush=True,
     )
@@ -426,14 +482,18 @@ def run_multishot(cfg: MultishotConfig) -> Path:
         if i == 0 and face:
             first = face
 
+        # Keys: single turbo (fast) — dual-turbo reserved for full motion arms
         vid = render(
             cfg.head, label, prompt, cfg.seed + i, f"video/kf_{label}",
             cfg.kf_frames, cfg.kf_steps, first, None,
-            width=cfg.width, height=cfg.height, spectrum=cfg.spectrum,
-            upscale=None,  # keys at native res; upscale only motion arms
+            width=cfg.width, height=cfg.height, spectrum=cfg.spectrum and not cfg.motion_context,
+            upscale=None,
             work=cfg.work_dir,
-            turbo=cfg.turbo, turbo_lora=cfg.turbo_lora,
-            turbo_strength=cfg.turbo_strength, turbo_low_vram=cfg.turbo_low_vram,
+            turbo=cfg.turbo and not cfg.dual_turbo,
+            turbo_lora=cfg.turbo_lora,
+            turbo_strength=cfg.turbo_strength,
+            turbo_low_vram=cfg.turbo_low_vram,
+            dual_turbo=False,
         )
         key_png = cfg.work_dir / f"K{i}.png"
         extract_frame(vid, key_png, "last")
@@ -446,39 +506,87 @@ def run_multishot(cfg: MultishotConfig) -> Path:
     phase0 = time.time() - t0
     print(f"  phase0 wall {phase0:.0f}s  — {n_keys} shared keys on both boxes", flush=True)
 
-    # --- Phase 1: parallel FLF arms (waves of 2) ---
+    # --- Phase 1: FLF arms ---
+    # Motion Context needs previous arm audio/latent → sequential on one host.
+    # Dual turbo runs full ANe5s two-stage on each arm; two boxes still parallel
+    # when motion_context is off.
+    sequential = cfg.motion_context
     print(
-        f"\n=== PHASE 1: parallel FLF arms ({(n_arms + 1) // 2} waves × 2 boxes) ===\n"
-        f"  arm_i: first=K_i last=K_{{i+1}}  → seamless hard-cut chain",
+        f"\n=== PHASE 1: FLF arms "
+        f"({'SEQUENTIAL motion-context' if sequential else f'PARALLEL waves×2'}) ===\n"
+        f"  arm_i: first=K_i last=K_{{i+1}}  dual_turbo={cfg.dual_turbo}",
         flush=True,
     )
     t1 = time.time()
-    arm_jobs: list[tuple[str, str, Callable[[], Path]]] = []
-    for i in range(n_arms):
-        host = cfg.head if i % 2 == 0 else cfg.worker
-        fn = i + 1
-        ap = cfg.full_prompt(cfg.arm_prompts[i])
 
-        def make_job(i=i, host=host, fn=fn, ap=ap):
-            return lambda: render(
-                host, f"arm{fn}", ap, cfg.seed + 100 + i, f"video/arm{fn}",
-                cfg.arm_frames, cfg.steps, key_names[i], key_names[i + 1],
-                width=cfg.width, height=cfg.height, spectrum=cfg.spectrum,
-                upscale=cfg.upscale, work=cfg.work_dir,
-                turbo=cfg.turbo, turbo_lora=cfg.turbo_lora,
-                turbo_strength=cfg.turbo_strength, turbo_low_vram=cfg.turbo_low_vram,
-            )
-
-        arm_jobs.append((host, f"arm{fn}", make_job()))
+    def arm_kwargs(i: int, prev_vid_name: str | None):
+        return dict(
+            width=cfg.width,
+            height=cfg.height,
+            spectrum=cfg.spectrum and not cfg.motion_context,
+            upscale=cfg.upscale,
+            work=cfg.work_dir,
+            turbo=cfg.turbo,
+            turbo_lora=cfg.turbo_lora,
+            turbo_strength=cfg.turbo_strength,
+            turbo_low_vram=cfg.turbo_low_vram,
+            dual_turbo=cfg.dual_turbo,
+            turbo_lora_rough=cfg.turbo_lora_rough,
+            turbo_strength_rough=cfg.turbo_strength_rough,
+            turbo_steps_rough=cfg.turbo_steps_rough,
+            turbo_lora_refine=cfg.turbo_lora_refine,
+            turbo_strength_refine=cfg.turbo_strength_refine,
+            turbo_steps_refine=cfg.turbo_steps_refine,
+            motion_context=cfg.motion_context and i > 0,
+            prev_video=prev_vid_name,
+            context_length=cfg.context_length,
+            audio_context_length=cfg.audio_context_length,
+            motion_clip_index=(i + 1) if cfg.motion_context else 0,
+        )
 
     all_arms: list[Path] = []
-    for w in range((n_arms + 1) // 2):
-        wave = arm_jobs[w * 2 : w * 2 + 2]
-        print(f"  -- wave {w + 1}: {[lab for _, lab, _ in wave]} --", flush=True)
-        all_arms += run_parallel([fn for _, _, fn in wave])
+    if sequential:
+        # stay on HEAD so Motion Context latents + prev video stay local
+        host = cfg.head
+        prev_name: str | None = None
+        for i in range(n_arms):
+            fn = i + 1
+            ap = cfg.full_prompt(cfg.arm_prompts[i])
+            if i > 0:
+                # upload previous arm video into Comfy input for LoadVideo
+                prev_path = all_arms[-1]
+                prev_name = upload_image(host, prev_path, f"prev_arm{i}.mp4")
+                # LoadVideo expects video in input; upload_image puts in input — good
+            p = render(
+                host, f"arm{fn}", ap, cfg.seed + 100 + i, f"video/arm{fn}",
+                cfg.arm_frames, cfg.steps, key_names[i], key_names[i + 1],
+                **arm_kwargs(i, prev_name),
+            )
+            all_arms.append(p)
+            shutil.copy2(p, cfg.out_dir / f"arm{fn}.mp4")
+    else:
+        arm_jobs: list[tuple[str, str, Callable[[], Path]]] = []
+        for i in range(n_arms):
+            host = cfg.head if i % 2 == 0 else cfg.worker
+            fn = i + 1
+            ap = cfg.full_prompt(cfg.arm_prompts[i])
 
-    for i, p in enumerate(all_arms):
-        shutil.copy2(p, cfg.out_dir / f"arm{i + 1}.mp4")
+            def make_job(i=i, host=host, fn=fn, ap=ap):
+                return lambda: render(
+                    host, f"arm{fn}", ap, cfg.seed + 100 + i, f"video/arm{fn}",
+                    cfg.arm_frames, cfg.steps, key_names[i], key_names[i + 1],
+                    **arm_kwargs(i, None),
+                )
+
+            arm_jobs.append((host, f"arm{fn}", make_job()))
+
+        for w in range((n_arms + 1) // 2):
+            wave = arm_jobs[w * 2 : w * 2 + 2]
+            print(f"  -- wave {w + 1}: {[lab for _, lab, _ in wave]} --", flush=True)
+            all_arms += run_parallel([fn for _, _, fn in wave])
+        for i, p in enumerate(all_arms):
+            shutil.copy2(p, cfg.out_dir / f"arm{i + 1}.mp4")
+
     phase1 = time.time() - t1
     print(f"  phase1 wall {phase1:.0f}s", flush=True)
 

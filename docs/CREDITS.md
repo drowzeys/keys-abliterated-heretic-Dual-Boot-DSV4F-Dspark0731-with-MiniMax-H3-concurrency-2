@@ -46,6 +46,8 @@ Extensions **on top of** Tony’s factory, not instead of it:
 | ComfyUI | Comfy Org |
 | **MiniMax-H3 Turbo LoRA** (few-step 4–8) | **[larryvrh/MiniMax-H3-Turbo-Lora](https://huggingface.co/larryvrh/MiniMax-H3-Turbo-Lora)** + **[ComfyUI-MiniMax-H3-Turbo](https://github.com/Larryvrh/ComfyUI-MiniMax-H3-Turbo)** |
 | **ComfyUI-fixed pruned Turbo weights** | **[QrusherZA/H3_Turbo_ComfyUI](https://huggingface.co/QrusherZA/H3_Turbo_ComfyUI)** (prefix/adaln fix for pruned bases; QrusherZA asks not to take credit for the Turbo training itself) |
+| **Dual-sampler Turbo quality recipe** | **[@ANe5s](https://huggingface.co/ANe5s)** — [discussion #21](https://huggingface.co/larryvrh/MiniMax-H3-Turbo-Lora/discussions/21) (ckpt850@1.0 rough → ckpt500@0.7 refine) |
+| **H3 Motion Context** (audio+motion chain) | **[NikoDemon80/ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context)** |
 
 ---
 

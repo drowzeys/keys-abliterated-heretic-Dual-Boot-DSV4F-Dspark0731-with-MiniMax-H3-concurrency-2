@@ -39,10 +39,15 @@ bash deploy/keyspark/setup_h3_turbo.sh               # once: Turbo LoRA + nodes
 bash deploy/keyspark/status.sh
 bash deploy/keyspark/run_quality_parallel.sh          # FLF multishot HP dragon
 H3_I0_REF=/path/to/face.png bash deploy/keyspark/run_quality_parallel.sh
-# few-step turbo (~4–8 steps, much faster sampling):
+# few-step turbo (~4–8 steps):
 H3_TURBO=1 bash deploy/keyspark/run_quality_parallel.sh
+# dual-sampler HQ (ANe5s #21) — both Sparks still parallelize arms:
+H3_DUAL_TURBO=1 bash deploy/keyspark/run_quality_parallel.sh
+# continuous audio (Motion Context) + dual turbo:
+H3_DUAL_TURBO=1 H3_MOTION_CONTEXT=1 bash deploy/keyspark/run_quality_parallel.sh
 # longer FLF stories (Hermes scripts):
 python3 deploy/keyspark/connelly_flf_20s.py
 python3 deploy/keyspark/connelly_flf_30s.py
 bash deploy/keyspark/teardown.sh
 ```
+See `docs/DUAL_TURBO_MOTION.md`.
