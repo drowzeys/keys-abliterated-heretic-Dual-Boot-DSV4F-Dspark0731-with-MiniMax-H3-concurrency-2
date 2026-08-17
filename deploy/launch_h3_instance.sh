@@ -43,3 +43,8 @@ echo "NOTE: ComfyUI's own vram_free is unreliable for capacity planning."
 echo "It counts torch's cached-but-unallocated blocks as free, and on a"
 echo "unified-memory node it reads MemFree (which excludes reclaimable page"
 echo "cache). Use nvidia-smi or /proc/meminfo instead."
+# --- GB10 vLLM spin-wait fix (see GB10_SPIN_WAIT_PATCH.md) --------------------
+# If this script runs a stock vLLM image, the served container will busy-spin CPU
+# cores at max clock while waiting on shm_broadcast (busy_loop_s=1s default),
+# heating the shared GB10 SoC. Prefer an image built with the patch baked in.
+# https://nacyot.github.io/artifacts/vllm-spin-wait-gb10/

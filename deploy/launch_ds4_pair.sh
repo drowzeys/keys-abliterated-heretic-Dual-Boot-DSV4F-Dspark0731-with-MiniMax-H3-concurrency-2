@@ -76,3 +76,8 @@ echo
 echo "Weights take ~5.5 min. Watch for: 'Model loading took 79.51 GiB'"
 echo "then 'GPU KV cache size: 1,473,052 tokens'. If you instead see"
 echo "'No available memory for the cache blocks', your UTIL is too low."
+# --- GB10 vLLM spin-wait fix (see GB10_SPIN_WAIT_PATCH.md) --------------------
+# If this script runs a stock vLLM image, the served container will busy-spin CPU
+# cores at max clock while waiting on shm_broadcast (busy_loop_s=1s default),
+# heating the shared GB10 SoC. Prefer an image built with the patch baked in.
+# https://nacyot.github.io/artifacts/vllm-spin-wait-gb10/
